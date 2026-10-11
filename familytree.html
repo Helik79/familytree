@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>English Family Tree Challenge - Grade 6</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti for winning animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Fredoka', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .avatar-card {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+        }
+
+        .avatar-card:hover {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .avatar-card.selected {
+            outline: 3px solid #3b82f6;
+            transform: scale(1.03);
+            box-shadow: 0 8px 20px -4px rgba(59, 130, 246, 0.4);
+        }
+
+        .tree-slot {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .tree-slot.drag-over {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.02);
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @keyframes pulse-light {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .pulse-btn {
+            animation: pulse-light 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-amber-50 via-sky-50 to-indigo-100 h-screen overflow-hidden text-slate-800 flex flex-col justify-between p-2 md:p-3 select-none">
+
+    <header class="bg-white/95 backdrop-blur-md border border-indigo-100 rounded-2xl px-4 py-2 shadow-sm shrink-0 mb-2">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md text-lg font-bold">
+                    <i class="fa-solid fa-sitemap"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold bg-gradient-to-r from-indigo-600 to-sky-600 bg-clip-text text-transparent leading-tight">
+                        Family Tree Challenge
+                    </h1>
+                    <p class="text-[11px] text-slate-500 font-medium">6th Grade English Practice</p>
+                </div>
+            </div>
+
+            <!-- Stats & Game Controls -->
+            <div class="flex items-center gap-2 md:gap-3">
+                <div class="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl">
+                    <i class="fa-solid fa-star text-amber-500 text-sm"></i>
+                    <span class="text-xs font-semibold text-amber-900">Score: <span id="score-val" class="text-indigo-600 font-bold">0</span></span>
+                </div>
+                
+                <div class="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
+                    <i class="fa-solid fa-trophy text-emerald-500 text-sm"></i>
+                    <span class="text-xs font-semibold text-emerald-900">Level: <span id="level-val" class="text-emerald-700 font-bold">1</span></span>
+                </div>
+
+                <!-- Sound Toggle -->
+                <button id="sound-btn" onclick="toggleSound()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition shadow-sm active:scale-95" title="Toggle Sound">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-base text-indigo-600"></i>
+                </button>
+
+                <!-- Vocabulary Modal Trigger -->
+                <button onclick="openVocabModal()" class="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-xs font-semibold transition shadow-md shadow-sky-200 flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Vocabulary</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full flex-1 min-h-0 grid grid-cols-12 gap-2 md:gap-3">
+        
+        <!-- Left Side: Clues & Avatar Dock -->
+        <section class="col-span-4 flex flex-col gap-2 h-full min-h-0 overflow-hidden">
+            
+            <!-- Instructions & Clues Box -->
+            <div class="bg-white rounded-2xl p-3 shadow-md border border-indigo-50 flex flex-col gap-1.5 h-1/2 min-h-0 overflow-hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-1.5 shrink-0">
+                    <div class="flex items-center gap-1.5 text-indigo-700 font-bold text-xs md:text-sm">
+                        <i class="fa-solid fa-lightbulb text-amber-500 text-base"></i>
+                        <span>Clues</span>
+                    </div>
+                    <span id="clues-remaining-badge" class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">Read & Deduce</span>
+                </div>
+
+                <!-- Clues List Container -->
+                <div id="clues-container" class="space-y-1.5 overflow-y-auto pr-1 flex-1">
+                    <!-- Dynamic clues inserted here -->
+                </div>
+            </div>
+
+            <!-- Avatars Dock Container -->
+            <div class="bg-white rounded-2xl p-3 shadow-md border border-indigo-50 flex flex-col gap-1.5 h-1/2 min-h-0 overflow-hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-1.5 shrink-0">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-1.5 text-xs md:text-sm">
+                        <i class="fa-solid fa-users text-sky-500"></i>
+                        <span>People to Place</span>
+                    </h2>
+                    <span id="dock-count" class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">0 remaining</span>
+                </div>
+
+                <!-- Avatar Dock Grid -->
+                <div id="avatar-dock" class="grid grid-cols-2 gap-1.5 overflow-y-auto p-0.5 flex-1 content-start">
+                    <!-- Avatars render dynamically here -->
+                </div>
+            </div>
+
+        </section>
+
+        <section class="col-span-8 bg-white rounded-2xl p-3 shadow-md border border-indigo-50 flex flex-col justify-between h-full min-h-0 overflow-hidden">
+            
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2 shrink-0">
+                <div>
+                    <h2 class="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-tree text-emerald-500"></i>
+                        <span id="tree-title">Family Tree Board</span>
+                    </h2>
+                    <p class="text-[11px] text-slate-500">Place every family member in their proper position.</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="resetCurrentTree()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition active:scale-95 flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                    <button onclick="checkAnswers()" class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs md:text-sm font-bold shadow-md shadow-emerald-200 transition active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> Check Answers
+                    </button>
+                </div>
+            </div>
+
+            <!-- Family Tree Visual Board -->
+            <div id="tree-board" class="flex-1 flex flex-col justify-around py-1 min-h-0 overflow-hidden">
+                <!-- Dynamic tree layout rendered here via JS -->
+            </div>
+
+            <!-- Feedback Message Bar -->
+            <div id="feedback-bar" class="shrink-0 p-2 rounded-xl text-center text-xs md:text-sm font-bold hidden transition-all">
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Vocabulary Modal -->
+    <div id="vocab-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-indigo-100 flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-book text-sky-500"></i> Family Vocabulary Reference
+                </h3>
+                <button onclick="closeVocabModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs max-h-72 overflow-y-auto pr-1">
+                <div class="p-2 bg-indigo-50/60 rounded-lg"><strong class="text-indigo-900">Grandfather</strong> <span class="text-slate-500 block text-[11px]">Father of a parent</span></div>
+                <div class="p-2 bg-indigo-50/60 rounded-lg"><strong class="text-indigo-900">Grandmother</strong> <span class="text-slate-500 block text-[11px]">Mother of a parent</span></div>
+                <div class="p-2 bg-sky-50/60 rounded-lg"><strong class="text-sky-900">Father / Dad</strong> <span class="text-slate-500 block text-[11px]">Male parent</span></div>
+                <div class="p-2 bg-sky-50/60 rounded-lg"><strong class="text-sky-900">Mother / Mum</strong> <span class="text-slate-500 block text-[11px]">Female parent</span></div>
+                <div class="p-2 bg-rose-50/60 rounded-lg"><strong class="text-rose-900">Husband</strong> <span class="text-slate-500 block text-[11px]">Married man / male spouse</span></div>
+                <div class="p-2 bg-rose-50/60 rounded-lg"><strong class="text-rose-900">Wife</strong> <span class="text-slate-500 block text-[11px]">Married woman / female spouse</span></div>
+                <div class="p-2 bg-purple-50/60 rounded-lg"><strong class="text-purple-900">Uncle</strong> <span class="text-slate-500 block text-[11px]">Brother of father or mother</span></div>
+                <div class="p-2 bg-purple-50/60 rounded-lg"><strong class="text-purple-900">Aunt</strong> <span class="text-slate-500 block text-[11px]">Sister of father or mother</span></div>
+                <div class="p-2 bg-amber-50/60 rounded-lg"><strong class="text-amber-900">Brother</strong> <span class="text-slate-500 block text-[11px]">Male sibling</span></div>
+                <div class="p-2 bg-amber-50/60 rounded-lg"><strong class="text-amber-900">Sister</strong> <span class="text-slate-500 block text-[11px]">Female sibling</span></div>
+                <div class="p-2 bg-emerald-50/60 rounded-lg"><strong class="text-emerald-900">Cousin</strong> <span class="text-slate-500 block text-[11px]">Child of uncle/aunt</span></div>
+                <div class="p-2 bg-emerald-50/60 rounded-lg"><strong class="text-emerald-900">Son / Daughter</strong> <span class="text-slate-500 block text-[11px]">Male / Female child</span></div>
+            </div>
+
+            <div class="bg-amber-50 p-2.5 rounded-xl text-xs text-amber-800 border border-amber-200">
+                💡 <strong>Grammar Tip:</strong> Pay attention to <strong>'s</strong> for possession and <strong>is NOT</strong> for negative clues!
+            </div>
+
+            <button onclick="closeVocabModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md">
+                Got it, back to game!
+            </button>
+        </div>
+    </div>
+
+    <!-- Level Complete Modal -->
+    <div id="success-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-5 text-center shadow-2xl border border-emerald-100 flex flex-col items-center gap-3">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl shadow-inner">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-slate-800">Great Job!</h3>
+                <p class="text-slate-500 text-xs mt-0.5">You correctly completed the entire family tree!</p>
+            </div>
+
+            <div class="bg-slate-50 w-full p-3 rounded-2xl flex justify-around items-center my-1">
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold uppercase">Bonus Points</span>
+                    <span id="modal-score" class="text-xl font-bold text-indigo-600">+100</span>
+                </div>
+                <div class="w-px h-6 bg-slate-200"></div>
+                <div>
+                    <span class="text-[10px] text-slate-400 block font-semibold uppercase">Next Level</span>
+                    <span id="modal-level" class="text-xl font-bold text-emerald-600">Level 2</span>
+                </div>
+            </div>
+
+            <button onclick="generateNextLevel()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-emerald-200 active:scale-95 pulse-btn flex items-center justify-center gap-2">
+                <span>Next Family Tree</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = 1;
+        let score = 0;
+        let soundEnabled = true;
+        let selectedAvatarId = null;
+        let activeFamilyTree = null;
+        let userPlacements = {}; // slotRole -> memberObj
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'select') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'place') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.15);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'correct') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(180, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                }
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        window.toggleSound = function() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-base text-indigo-600';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-base text-slate-400';
+            }
+        };
+
+        window.openVocabModal = function() {
+            document.getElementById('vocab-modal').classList.remove('hidden');
+        };
+
+        window.closeVocabModal = function() {
+            document.getElementById('vocab-modal').classList.add('hidden');
+        };
+
+        const MALE_NAMES = ['John', 'David', 'Robert', 'Michael', 'James', 'William', 'Richard', 'Thomas', 'Charles', 'Daniel', 'Paul', 'Mark', 'George', 'Kevin', 'Brian', 'Peter', 'Jack', 'Oliver', 'Harry', 'Charlie', 'Leo', 'Noah'];
+        const FEMALE_NAMES = ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen', 'Nancy', 'Lisa', 'Betty', 'Sandra', 'Ashley', 'Emily', 'Lucy', 'Grace', 'Chloe', 'Emma', 'Mia', 'Sophia'];
+
+        function getRandomElement(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function generateFamilyTree() {
+            const usedNames = new Set();
+
+            function getUniqueName(gender) {
+                const pool = gender === 'M' ? MALE_NAMES : FEMALE_NAMES;
+                let name = getRandomElement(pool);
+                while (usedNames.has(name)) {
+                    name = getRandomElement(pool);
+                }
+                usedNames.add(name);
+                return name;
+            }
+
+            const meGender = Math.random() > 0.5 ? 'M' : 'F';
+            const meName = getUniqueName(meGender);
+
+            const structureTypes = ['standard_extended', 'two_siblings', 'two_cousins', 'single_grandparent'];
+            const structureType = structureTypes[(currentLevel - 1) % structureTypes.length];
+
+            let tree = {};
+            let clues = [];
+            let layoutType = structureType;
+
+            if (structureType === 'standard_extended') {
+                const siblingGender = Math.random() > 0.5 ? 'M' : 'F';
+                const siblingRole = siblingGender === 'M' ? 'brother' : 'sister';
+                const cousinGender = Math.random() > 0.5 ? 'M' : 'F';
+
+                tree = {
+                    me: { id: 'me', name: meName, gender: meGender, role: 'me', label: 'ME' },
+                    grandfather: { id: 'grandfather', name: getUniqueName('M'), gender: 'M', role: 'grandfather', label: 'Grandfather' },
+                    grandmother: { id: 'grandmother', name: getUniqueName('F'), gender: 'F', role: 'grandmother', label: 'Grandmother' },
+                    father: { id: 'father', name: getUniqueName('M'), gender: 'M', role: 'father', label: 'Father' },
+                    mother: { id: 'mother', name: getUniqueName('F'), gender: 'F', role: 'mother', label: 'Mother' },
+                    uncle: { id: 'uncle', name: getUniqueName('M'), gender: 'M', role: 'uncle', label: 'Uncle' },
+                    aunt: { id: 'aunt', name: getUniqueName('F'), gender: 'F', role: 'aunt', label: 'Aunt' },
+                    sibling: { id: 'sibling', name: getUniqueName(siblingGender), gender: siblingGender, role: 'sibling', label: siblingRole === 'brother' ? 'Brother' : 'Sister' },
+                    cousin: { id: 'cousin', name: getUniqueName(cousinGender), gender: cousinGender, role: 'cousin', label: 'Cousin' }
+                };
+
+                clues = [
+                    { text: `${tree.grandfather.name} is ${tree.me.name}'s grandfather.`, requiredRoles: ['grandfather'] },
+                    { text: `${tree.grandfather.name} is ${tree.grandmother.name}'s husband.`, requiredRoles: ['grandfather', 'grandmother'] },
+                    { text: `${tree.father.name} is ${tree.grandfather.name}'s son and ${tree.me.name}'s father.`, requiredRoles: ['father', 'grandfather'] },
+                    { text: `${tree.father.name} is ${tree.mother.name}'s husband.`, requiredRoles: ['father', 'mother'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle and ${tree.father.name}'s brother.`, requiredRoles: ['uncle', 'father'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt and ${tree.uncle.name}'s wife.`, requiredRoles: ['aunt', 'uncle'] },
+                    { text: `${tree.sibling.name} is ${tree.me.name}'s ${siblingRole}.`, requiredRoles: ['sibling'] },
+                    { text: `${tree.cousin.name} is ${tree.uncle.name} and ${tree.aunt.name}'s ${cousinGender === 'M' ? 'son' : 'daughter'}.`, requiredRoles: ['cousin', 'uncle', 'aunt'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle, NOT ${tree.me.name}'s father.`, requiredRoles: ['uncle'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt, NOT ${tree.me.name}'s mother.`, requiredRoles: ['aunt'] }
+                ];
+
+            } else if (structureType === 'two_siblings') {
+                tree = {
+                    me: { id: 'me', name: meName, gender: meGender, role: 'me', label: 'ME' },
+                    grandfather: { id: 'grandfather', name: getUniqueName('M'), gender: 'M', role: 'grandfather', label: 'Grandfather' },
+                    grandmother: { id: 'grandmother', name: getUniqueName('F'), gender: 'F', role: 'grandmother', label: 'Grandmother' },
+                    father: { id: 'father', name: getUniqueName('M'), gender: 'M', role: 'father', label: 'Father' },
+                    mother: { id: 'mother', name: getUniqueName('F'), gender: 'F', role: 'mother', label: 'Mother' },
+                    uncle: { id: 'uncle', name: getUniqueName('M'), gender: 'M', role: 'uncle', label: 'Uncle' },
+                    aunt: { id: 'aunt', name: getUniqueName('F'), gender: 'F', role: 'aunt', label: 'Aunt' },
+                    brother: { id: 'brother', name: getUniqueName('M'), gender: 'M', role: 'brother', label: 'Brother' },
+                    sister: { id: 'sister', name: getUniqueName('F'), gender: 'F', role: 'sister', label: 'Sister' },
+                    cousin: { id: 'cousin', name: getUniqueName('M'), gender: 'M', role: 'cousin', label: 'Cousin' }
+                };
+
+                clues = [
+                    { text: `${tree.grandfather.name} is ${tree.me.name}'s grandfather.`, requiredRoles: ['grandfather'] },
+                    { text: `${tree.grandfather.name} is ${tree.grandmother.name}'s husband.`, requiredRoles: ['grandfather', 'grandmother'] },
+                    { text: `${tree.father.name} is ${tree.grandfather.name}'s son and ${tree.me.name}'s father.`, requiredRoles: ['father', 'grandfather'] },
+                    { text: `${tree.father.name} is ${tree.mother.name}'s husband.`, requiredRoles: ['father', 'mother'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle and ${tree.father.name}'s brother.`, requiredRoles: ['uncle', 'father'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt and ${tree.uncle.name}'s wife.`, requiredRoles: ['aunt', 'uncle'] },
+                    { text: `${tree.brother.name} is ${tree.me.name}'s brother.`, requiredRoles: ['brother'] },
+                    { text: `${tree.sister.name} is ${tree.me.name}'s sister.`, requiredRoles: ['sister'] },
+                    { text: `${tree.cousin.name} is ${tree.aunt.name}'s son.`, requiredRoles: ['cousin', 'aunt'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt, NOT ${tree.me.name}'s grandmother.`, requiredRoles: ['aunt'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle, NOT ${tree.me.name}'s father.`, requiredRoles: ['uncle'] }
+                ];
+
+            } else if (structureType === 'two_cousins') {
+                const siblingGender = Math.random() > 0.5 ? 'M' : 'F';
+                const siblingRole = siblingGender === 'M' ? 'brother' : 'sister';
+
+                tree = {
+                    me: { id: 'me', name: meName, gender: meGender, role: 'me', label: 'ME' },
+                    grandfather: { id: 'grandfather', name: getUniqueName('M'), gender: 'M', role: 'grandfather', label: 'Grandfather' },
+                    grandmother: { id: 'grandmother', name: getUniqueName('F'), gender: 'F', role: 'grandmother', label: 'Grandmother' },
+                    father: { id: 'father', name: getUniqueName('M'), gender: 'M', role: 'father', label: 'Father' },
+                    mother: { id: 'mother', name: getUniqueName('F'), gender: 'F', role: 'mother', label: 'Mother' },
+                    uncle: { id: 'uncle', name: getUniqueName('M'), gender: 'M', role: 'uncle', label: 'Uncle' },
+                    aunt: { id: 'aunt', name: getUniqueName('F'), gender: 'F', role: 'aunt', label: 'Aunt' },
+                    sibling: { id: 'sibling', name: getUniqueName(siblingGender), gender: siblingGender, role: 'sibling', label: siblingRole === 'brother' ? 'Brother' : 'Sister' },
+                    cousin_boy: { id: 'cousin_boy', name: getUniqueName('M'), gender: 'M', role: 'cousin_boy', label: 'Male Cousin' },
+                    cousin_girl: { id: 'cousin_girl', name: getUniqueName('F'), gender: 'F', role: 'cousin_girl', label: 'Female Cousin' }
+                };
+
+                clues = [
+                    { text: `${tree.grandfather.name} is ${tree.me.name}'s grandfather.`, requiredRoles: ['grandfather'] },
+                    { text: `${tree.grandfather.name} is ${tree.grandmother.name}'s husband.`, requiredRoles: ['grandfather', 'grandmother'] },
+                    { text: `${tree.father.name} is ${tree.grandfather.name}'s son.`, requiredRoles: ['father', 'grandfather'] },
+                    { text: `${tree.mother.name} is ${tree.father.name}'s wife.`, requiredRoles: ['mother', 'father'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle and ${tree.father.name}'s brother.`, requiredRoles: ['uncle', 'father'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt and ${tree.uncle.name}'s wife.`, requiredRoles: ['aunt', 'uncle'] },
+                    { text: `${tree.sibling.name} is ${tree.me.name}'s ${siblingRole}.`, requiredRoles: ['sibling'] },
+                    { text: `${tree.cousin_boy.name} is ${tree.uncle.name}'s son.`, requiredRoles: ['cousin_boy', 'uncle'] },
+                    { text: `${tree.cousin_girl.name} is ${tree.uncle.name}'s daughter.`, requiredRoles: ['cousin_girl', 'uncle'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt, NOT ${tree.me.name}'s mother.`, requiredRoles: ['aunt'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle, NOT ${tree.me.name}'s father.`, requiredRoles: ['uncle'] }
+                ];
+
+            } else if (structureType === 'single_grandparent') {
+                const siblingGender = Math.random() > 0.5 ? 'M' : 'F';
+                const siblingRole = siblingGender === 'M' ? 'brother' : 'sister';
+
+                tree = {
+                    me: { id: 'me', name: meName, gender: meGender, role: 'me', label: 'ME' },
+                    grandmother: { id: 'grandmother', name: getUniqueName('F'), gender: 'F', role: 'grandmother', label: 'Grandmother' },
+                    father: { id: 'father', name: getUniqueName('M'), gender: 'M', role: 'father', label: 'Father' },
+                    mother: { id: 'mother', name: getUniqueName('F'), gender: 'F', role: 'mother', label: 'Mother' },
+                    uncle: { id: 'uncle', name: getUniqueName('M'), gender: 'M', role: 'uncle', label: 'Uncle' },
+                    aunt: { id: 'aunt', name: getUniqueName('F'), gender: 'F', role: 'aunt', label: 'Aunt' },
+                    sibling: { id: 'sibling', name: getUniqueName(siblingGender), gender: siblingGender, role: 'sibling', label: siblingRole === 'brother' ? 'Brother' : 'Sister' },
+                    cousin: { id: 'cousin', name: getUniqueName('F'), gender: 'F', role: 'cousin', label: 'Cousin' }
+                };
+
+                clues = [
+                    { text: `${tree.grandmother.name} is ${tree.me.name}'s grandmother.`, requiredRoles: ['grandmother'] },
+                    { text: `${tree.father.name} is ${tree.grandmother.name}'s son and ${tree.me.name}'s father.`, requiredRoles: ['father', 'grandmother'] },
+                    { text: `${tree.father.name} is ${tree.mother.name}'s husband.`, requiredRoles: ['father', 'mother'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle and ${tree.father.name}'s brother.`, requiredRoles: ['uncle', 'father'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt and ${tree.uncle.name}'s wife.`, requiredRoles: ['aunt', 'uncle'] },
+                    { text: `${tree.sibling.name} is ${tree.me.name}'s ${siblingRole}.`, requiredRoles: ['sibling'] },
+                    { text: `${tree.cousin.name} is ${tree.uncle.name}'s daughter.`, requiredRoles: ['cousin', 'uncle'] },
+                    { text: `${tree.aunt.name} is ${tree.me.name}'s aunt, NOT ${tree.me.name}'s mother.`, requiredRoles: ['aunt'] },
+                    { text: `${tree.uncle.name} is ${tree.me.name}'s uncle, NOT ${tree.me.name}'s father.`, requiredRoles: ['uncle'] }
+                ];
+            }
+
+            // Shuffle clues in completely random sequence
+            const shuffledClues = shuffleArray(clues);
+
+            return { tree, clues: shuffledClues, layoutType };
+        }
+
+        function renderTreeBoard(layoutType, tree) {
+            const board = document.getElementById('tree-board');
+            board.innerHTML = '';
+
+            if (layoutType === 'standard_extended') {
+                board.innerHTML = `
+                    <div class="flex justify-center items-center gap-6 md:gap-12 relative">
+                        <div id="slot-grandfather" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandfather"></div>
+                        <div class="w-8 md:w-12 h-1 bg-amber-200 rounded-full"></div>
+                        <div id="slot-grandmother" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandmother"></div>
+                    </div>
+                    <div class="flex justify-center -my-1"><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-center gap-2 px-2">
+                        <div class="flex items-center gap-1.5 bg-indigo-50/40 p-1.5 rounded-xl border border-indigo-100">
+                            <div id="slot-father" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="father"></div>
+                            <div class="text-indigo-400 font-bold text-xs">+</div>
+                            <div id="slot-mother" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="mother"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-purple-50/40 p-1.5 rounded-xl border border-purple-100">
+                            <div id="slot-uncle" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="uncle"></div>
+                            <div class="text-purple-400 font-bold text-xs">+</div>
+                            <div id="slot-aunt" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="aunt"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-around -my-1 px-10"><div class="w-0.5 h-3 bg-slate-300"></div><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-start gap-2">
+                        <div class="flex items-center gap-1.5 bg-sky-50/50 p-1.5 rounded-xl border border-sky-100">
+                            <div id="slot-me" class="w-24 md:w-28 h-20 md:h-22 bg-sky-500 text-white rounded-xl flex flex-col items-center justify-center p-1 text-center shadow-sm relative">
+                                <div class="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm mb-0.5"><i class="fa-solid fa-user-astronaut"></i></div>
+                                <span class="font-bold text-xs truncate max-w-[80px]">${tree.me.name}</span>
+                                <span class="text-[9px] bg-white/30 px-1.5 py-0.2 rounded-full mt-0.5 font-semibold">ME</span>
+                            </div>
+                            <div id="slot-sibling" class="tree-slot w-24 md:w-28 h-20 md:h-22 border-2 border-dashed border-sky-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="sibling"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-emerald-50/50 p-1.5 rounded-xl border border-emerald-100">
+                            <div id="slot-cousin" class="tree-slot w-24 md:w-28 h-20 md:h-22 border-2 border-dashed border-emerald-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="cousin"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (layoutType === 'two_siblings') {
+                board.innerHTML = `
+                    <div class="flex justify-center items-center gap-6 md:gap-12 relative">
+                        <div id="slot-grandfather" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandfather"></div>
+                        <div class="w-8 md:w-12 h-1 bg-amber-200 rounded-full"></div>
+                        <div id="slot-grandmother" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandmother"></div>
+                    </div>
+                    <div class="flex justify-center -my-1"><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-center gap-2 px-2">
+                        <div class="flex items-center gap-1.5 bg-indigo-50/40 p-1.5 rounded-xl border border-indigo-100">
+                            <div id="slot-father" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="father"></div>
+                            <div class="text-indigo-400 font-bold text-xs">+</div>
+                            <div id="slot-mother" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="mother"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-purple-50/40 p-1.5 rounded-xl border border-purple-100">
+                            <div id="slot-uncle" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="uncle"></div>
+                            <div class="text-purple-400 font-bold text-xs">+</div>
+                            <div id="slot-aunt" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="aunt"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-around -my-1 px-10"><div class="w-0.5 h-3 bg-slate-300"></div><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-start gap-2">
+                        <div class="flex items-center gap-1 bg-sky-50/50 p-1.5 rounded-xl border border-sky-100">
+                            <div id="slot-brother" class="tree-slot w-20 md:w-24 h-20 md:h-22 border-2 border-dashed border-sky-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="brother"></div>
+                            <div id="slot-me" class="w-20 md:w-24 h-20 md:h-22 bg-sky-500 text-white rounded-xl flex flex-col items-center justify-center p-1 text-center shadow-sm relative">
+                                <div class="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm mb-0.5"><i class="fa-solid fa-user-astronaut"></i></div>
+                                <span class="font-bold text-xs truncate max-w-[70px]">${tree.me.name}</span>
+                                <span class="text-[9px] bg-white/30 px-1.5 py-0.2 rounded-full mt-0.5 font-semibold">ME</span>
+                            </div>
+                            <div id="slot-sister" class="tree-slot w-20 md:w-24 h-20 md:h-22 border-2 border-dashed border-sky-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="sister"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-emerald-50/50 p-1.5 rounded-xl border border-emerald-100">
+                            <div id="slot-cousin" class="tree-slot w-22 md:w-24 h-20 md:h-22 border-2 border-dashed border-emerald-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="cousin"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (layoutType === 'two_cousins') {
+                board.innerHTML = `
+                    <div class="flex justify-center items-center gap-6 md:gap-12 relative">
+                        <div id="slot-grandfather" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandfather"></div>
+                        <div class="w-8 md:w-12 h-1 bg-amber-200 rounded-full"></div>
+                        <div id="slot-grandmother" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandmother"></div>
+                    </div>
+                    <div class="flex justify-center -my-1"><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-center gap-2 px-2">
+                        <div class="flex items-center gap-1.5 bg-indigo-50/40 p-1.5 rounded-xl border border-indigo-100">
+                            <div id="slot-father" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="father"></div>
+                            <div class="text-indigo-400 font-bold text-xs">+</div>
+                            <div id="slot-mother" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="mother"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-purple-50/40 p-1.5 rounded-xl border border-purple-100">
+                            <div id="slot-uncle" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="uncle"></div>
+                            <div class="text-purple-400 font-bold text-xs">+</div>
+                            <div id="slot-aunt" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="aunt"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-around -my-1 px-10"><div class="w-0.5 h-3 bg-slate-300"></div><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-start gap-2">
+                        <div class="flex items-center gap-1.5 bg-sky-50/50 p-1.5 rounded-xl border border-sky-100">
+                            <div id="slot-me" class="w-22 md:w-24 h-20 md:h-22 bg-sky-500 text-white rounded-xl flex flex-col items-center justify-center p-1 text-center shadow-sm relative">
+                                <div class="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm mb-0.5"><i class="fa-solid fa-user-astronaut"></i></div>
+                                <span class="font-bold text-xs truncate max-w-[70px]">${tree.me.name}</span>
+                                <span class="text-[9px] bg-white/30 px-1.5 py-0.2 rounded-full mt-0.5 font-semibold">ME</span>
+                            </div>
+                            <div id="slot-sibling" class="tree-slot w-22 md:w-24 h-20 md:h-22 border-2 border-dashed border-sky-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="sibling"></div>
+                        </div>
+                        <div class="flex items-center gap-1 bg-emerald-50/50 p-1.5 rounded-xl border border-emerald-100">
+                            <div id="slot-cousin_boy" class="tree-slot w-20 md:w-22 h-20 md:h-22 border-2 border-dashed border-emerald-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="cousin_boy"></div>
+                            <div id="slot-cousin_girl" class="tree-slot w-20 md:w-22 h-20 md:h-22 border-2 border-dashed border-emerald-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="cousin_girl"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (layoutType === 'single_grandparent') {
+                board.innerHTML = `
+                    <div class="flex justify-center items-center relative">
+                        <div id="slot-grandmother" class="tree-slot w-28 md:w-32 h-20 md:h-22 border-2 border-dashed border-amber-300 bg-amber-50/50 rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="grandmother"></div>
+                    </div>
+                    <div class="flex justify-center -my-1"><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-center gap-2 px-2">
+                        <div class="flex items-center gap-1.5 bg-indigo-50/40 p-1.5 rounded-xl border border-indigo-100">
+                            <div id="slot-father" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="father"></div>
+                            <div class="text-indigo-400 font-bold text-xs">+</div>
+                            <div id="slot-mother" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-indigo-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="mother"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-purple-50/40 p-1.5 rounded-xl border border-purple-100">
+                            <div id="slot-uncle" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="uncle"></div>
+                            <div class="text-purple-400 font-bold text-xs">+</div>
+                            <div id="slot-aunt" class="tree-slot w-26 md:w-28 h-20 md:h-22 border-2 border-dashed border-purple-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="aunt"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-around -my-1 px-10"><div class="w-0.5 h-3 bg-slate-300"></div><div class="w-0.5 h-3 bg-slate-300"></div></div>
+                    <div class="flex justify-around items-start gap-2">
+                        <div class="flex items-center gap-1.5 bg-sky-50/50 p-1.5 rounded-xl border border-sky-100">
+                            <div id="slot-me" class="w-24 md:w-28 h-20 md:h-22 bg-sky-500 text-white rounded-xl flex flex-col items-center justify-center p-1 text-center shadow-sm relative">
+                                <div class="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm mb-0.5"><i class="fa-solid fa-user-astronaut"></i></div>
+                                <span class="font-bold text-xs truncate max-w-[80px]">${tree.me.name}</span>
+                                <span class="text-[9px] bg-white/30 px-1.5 py-0.2 rounded-full mt-0.5 font-semibold">ME</span>
+                            </div>
+                            <div id="slot-sibling" class="tree-slot w-24 md:w-28 h-20 md:h-22 border-2 border-dashed border-sky-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="sibling"></div>
+                        </div>
+                        <div class="flex items-center gap-1.5 bg-emerald-50/50 p-1.5 rounded-xl border border-emerald-100">
+                            <div id="slot-cousin" class="tree-slot w-24 md:w-28 h-20 md:h-22 border-2 border-dashed border-emerald-300 bg-white rounded-xl flex flex-col items-center justify-center p-1 text-center relative" data-role="cousin"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateCluesVisibility() {
+            if (!activeFamilyTree) return;
+            const { tree, clues } = activeFamilyTree;
+            const cluesContainer = document.getElementById('clues-container');
+            if (!cluesContainer) return;
+
+            const clueElements = cluesContainer.querySelectorAll('.clue-item');
+            let visibleCount = 0;
+
+            clueElements.forEach(el => {
+                const index = parseInt(el.dataset.index, 10);
+                const clueObj = clues[index];
+                if (!clueObj) return;
+
+                const isSatisfied = clueObj.requiredRoles.every(role => 
+                    userPlacements[role] && userPlacements[role].id === tree[role].id
+                );
+
+                if (isSatisfied) {
+                    el.classList.add('hidden');
+                } else {
+                    el.classList.remove('hidden');
+                    visibleCount++;
+                }
+            });
+
+            const clueBadge = document.getElementById('clues-remaining-badge');
+            if (clueBadge) {
+                clueBadge.innerText = `${visibleCount} remaining`;
+            }
+
+            let emptyMsg = document.getElementById('clues-completed-msg');
+            if (visibleCount === 0 && clues.length > 0) {
+                if (!emptyMsg) {
+                    emptyMsg = document.createElement('div');
+                    emptyMsg.id = 'clues-completed-msg';
+                    emptyMsg.className = 'p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold text-center flex flex-col items-center gap-1 my-2 animate-bounce';
+                    emptyMsg.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i><span>All clues satisfied! Press "Check Answers"!</span>';
+                    cluesContainer.appendChild(emptyMsg);
+                } else {
+                    emptyMsg.classList.remove('hidden');
+                }
+            } else if (emptyMsg) {
+                emptyMsg.classList.add('hidden');
+            }
+        }
+
+        function slotPlaceholderLabel(role) {
+            switch(role) {
+                case 'grandfather': return 'Grandfather';
+                case 'grandmother': return 'Grandmother';
+                case 'father': return 'Father';
+                case 'mother': return 'Mother';
+                case 'uncle': return 'Uncle';
+                case 'aunt': return 'Aunt';
+                case 'brother': return 'Brother';
+                case 'sister': return 'Sister';
+                case 'sibling': return 'Brother / Sister';
+                case 'cousin': return 'Cousin';
+                case 'cousin_boy': return 'Male Cousin';
+                case 'cousin_girl': return 'Female Cousin';
+                default: return role;
+            }
+        }
+
+        function getRemainingAvatarsList() {
+            if (!activeFamilyTree) return [];
+            const { tree } = activeFamilyTree;
+            const placementRoles = Object.keys(tree).filter(r => r !== 'me');
+            return placementRoles.map(role => tree[role]);
+        }
+
+        function renderDock(avatars) {
+            const dock = document.getElementById('avatar-dock');
+            const dockCount = document.getElementById('dock-count');
+            if (!dock || !dockCount) return;
+            dock.innerHTML = '';
+
+            const unplaced = avatars.filter(a => !Object.values(userPlacements).some(p => p && p.id === a.id));
+            dockCount.innerText = `${unplaced.length} remaining`;
+
+            unplaced.forEach(member => {
+                const card = document.createElement('div');
+                card.className = `avatar-card p-2 bg-white border-2 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm relative ${selectedAvatarId === member.id ? 'border-indigo-500 bg-indigo-50/50 ring-2 ring-indigo-300 selected' : 'border-slate-200 hover:border-indigo-300'}`;
+                card.draggable = true;
+                card.dataset.id = member.id;
+
+                card.innerHTML = `
+                    <div class="w-10 h-10 rounded-full ${member.gender === 'M' ? 'bg-sky-100 text-sky-600' : 'bg-rose-100 text-rose-600'} flex items-center justify-center text-lg font-bold shadow-inner">
+                        <i class="fa-solid ${member.gender === 'M' ? 'fa-user-tie' : 'fa-user-large'}"></i>
+                    </div>
+                    <span class="font-bold text-xs text-slate-800 truncate max-w-[90px]">${member.name}</span>
+                `;
+
+                // Click / Tap Selection
+                card.onclick = () => {
+                    if (selectedAvatarId === member.id) {
+                        selectedAvatarId = null;
+                    } else {
+                        selectedAvatarId = member.id;
+                        playSound('select');
+                    }
+                    renderDock(getRemainingAvatarsList());
+                };
+
+                // Drag events for Desktop
+                card.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/plain', member.id);
+                    selectedAvatarId = member.id;
+                };
+
+                dock.appendChild(card);
+            });
+        }
+
+        function clearTreeSlots() {
+            const slots = document.querySelectorAll('.tree-slot');
+            slots.forEach(slot => {
+                const role = slot.dataset.role;
+                
+                slot.onclick = () => {
+                    if (userPlacements[role]) {
+                        // Return avatar from slot to dock
+                        delete userPlacements[role];
+                        playSound('place');
+                        renderDock(getRemainingAvatarsList());
+                        renderPlacedAvatars();
+                    } else if (selectedAvatarId) {
+                        const remaining = getRemainingAvatarsList();
+                        const member = remaining.find(m => m.id === selectedAvatarId);
+                        if (member) {
+                            // Clear avatar if placed elsewhere
+                            Object.keys(userPlacements).forEach(k => {
+                                if (userPlacements[k] && userPlacements[k].id === member.id) {
+                                    delete userPlacements[k];
+                                }
+                            });
+                            userPlacements[role] = member;
+                            selectedAvatarId = null;
+                            playSound('place');
+                            renderDock(getRemainingAvatarsList());
+                            renderPlacedAvatars();
+                        }
+                    }
+                };
+
+                // Drag and Drop event handlers
+                slot.ondragover = (e) => {
+                    e.preventDefault();
+                    slot.classList.add('drag-over');
+                };
+                slot.ondragleave = () => {
+                    slot.classList.remove('drag-over');
+                };
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    const memberId = e.dataTransfer.getData('text/plain') || selectedAvatarId;
+                    if (memberId) {
+                        const remaining = getRemainingAvatarsList();
+                        const member = remaining.find(m => m.id === memberId);
+                        if (member) {
+                            Object.keys(userPlacements).forEach(k => {
+                                if (userPlacements[k] && userPlacements[k].id === member.id) {
+                                    delete userPlacements[k];
+                                }
+                            });
+                            userPlacements[role] = member;
+                            selectedAvatarId = null;
+                            playSound('place');
+                            renderDock(getRemainingAvatarsList());
+                            renderPlacedAvatars();
+                        }
+                    }
+                };
+            });
+
+            renderPlacedAvatars();
+        }
+
+        function renderPlacedAvatars() {
+            const slots = document.querySelectorAll('.tree-slot');
+            slots.forEach(slot => {
+                const role = slot.dataset.role;
+                const placed = userPlacements[role];
+                if (placed) {
+                    slot.innerHTML = `
+                        <div class="w-8 h-8 rounded-full ${placed.gender === 'M' ? 'bg-sky-100 text-sky-600' : 'bg-rose-100 text-rose-600'} flex items-center justify-center text-sm font-bold mb-0.5 shadow-inner">
+                            <i class="fa-solid ${placed.gender === 'M' ? 'fa-user-tie' : 'fa-user-nurse'}"></i>
+                        </div>
+                        <span class="font-bold text-xs text-slate-800 truncate max-w-[80px]">${placed.name}</span>
+                        <span class="text-[9px] text-slate-400 capitalize">${placed.label || role}</span>
+                    `;
+                    slot.classList.add('bg-white', 'border-indigo-400');
+                    slot.classList.remove('bg-amber-50/50', 'bg-white/50');
+                } else {
+                    slot.innerHTML = `<span class="text-[10px] font-semibold text-slate-400 pointer-events-none">${slotPlaceholderLabel(role)}</span>`;
+                    slot.classList.remove('bg-white', 'border-indigo-400');
+                }
+            });
+
+            updateCluesVisibility();
+        }
+
+        window.resetCurrentTree = function() {
+            userPlacements = {};
+            selectedAvatarId = null;
+            playSound('select');
+            renderDock(getRemainingAvatarsList());
+            clearTreeSlots();
+            const feedbackBar = document.getElementById('feedback-bar');
+            if (feedbackBar) feedbackBar.classList.add('hidden');
+        };
+
+        function renderLevel() {
+            userPlacements = {};
+            selectedAvatarId = null;
+            const feedbackBar = document.getElementById('feedback-bar');
+            if (feedbackBar) feedbackBar.classList.add('hidden');
+
+            const { tree, clues, layoutType } = activeFamilyTree;
+
+            // Render Dynamic Tree Board Layout
+            renderTreeBoard(layoutType, tree);
+
+            // Render Clues
+            const cluesContainer = document.getElementById('clues-container');
+            cluesContainer.innerHTML = '';
+            clues.forEach((clueObj, idx) => {
+                const div = document.createElement('div');
+                div.className = 'clue-item p-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium text-slate-700 flex items-start gap-2 shadow-xs hover:bg-indigo-50/40 transition duration-300';
+                div.dataset.index = idx;
+                div.innerHTML = `<span class="bg-indigo-100 text-indigo-700 w-4 h-4 rounded-full flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">${idx + 1}</span> <span>${clueObj.text}</span>`;
+                cluesContainer.appendChild(div);
+            });
+
+            // Prepare avatars dock
+            const placementRoles = Object.keys(tree).filter(r => r !== 'me');
+            const avatarsList = placementRoles.map(role => tree[role]);
+            const shuffledAvatars = shuffleArray(avatarsList);
+
+            renderDock(shuffledAvatars);
+            clearTreeSlots();
+            updateCluesVisibility();
+        }
+
+        window.checkAnswers = function() {
+            const requiredRoles = Object.keys(activeFamilyTree.tree).filter(r => r !== 'me');
+            const feedbackBar = document.getElementById('feedback-bar');
+
+            const filledCount = Object.keys(userPlacements).filter(k => userPlacements[k]).length;
+            if (filledCount < requiredRoles.length) {
+                feedbackBar.className = "shrink-0 p-2 rounded-xl text-center text-xs md:text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 block";
+                feedbackBar.innerText = `Please place all family members first! (${requiredRoles.length - filledCount} remaining)`;
+                playSound('wrong');
+                return;
+            }
+
+            let isCorrect = true;
+            requiredRoles.forEach(role => {
+                const placed = userPlacements[role];
+                if (!placed || placed.role !== role) {
+                    isCorrect = false;
+                }
+            });
+
+            if (isCorrect) {
+                playSound('correct');
+                score += 100;
+                document.getElementById('score-val').innerText = score;
+                
+                feedbackBar.className = "shrink-0 p-2 rounded-xl text-center text-xs md:text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 block";
+                feedbackBar.innerText = "Awesome job! You solved the family tree correctly! 🎉";
+
+                if (window.confetti) {
+                    confetti({
+                        particleCount: 120,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+
+                setTimeout(() => {
+                    document.getElementById('modal-score').innerText = `+100 (Total: ${score})`;
+                    document.getElementById('modal-level').innerText = `Level ${currentLevel + 1}`;
+                    document.getElementById('success-modal').classList.remove('hidden');
+                }, 800);
+
+            } else {
+                playSound('wrong');
+                feedbackBar.className = "shrink-0 p-2 rounded-xl text-center text-xs md:text-sm font-bold bg-red-100 text-red-800 border border-red-300 block";
+                feedbackBar.innerText = "Some family members are in the wrong positions. Read the clues carefully and try again!";
+            }
+        };
+
+        window.generateNextLevel = function() {
+            currentLevel++;
+            document.getElementById('level-val').innerText = currentLevel;
+            document.getElementById('success-modal').classList.add('hidden');
+            
+            activeFamilyTree = generateFamilyTree();
+            renderLevel();
+        };
+
+        window.onload = function() {
+            activeFamilyTree = generateFamilyTree();
+            renderLevel();
+        };
+    </script>
+</body>
+</html>
